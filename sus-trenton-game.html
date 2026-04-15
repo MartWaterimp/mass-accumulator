@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trenton Mass Accumulator</title>
+    <style>
+        :root {
+            --bg-color: #050505;
+            --text-main: #00ffcc;
+            --text-dim: #00aa88;
+            --border-color: #00ffcc;
+            --bg-panel: #111;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            width: 100%;
+            max-width: 800px;
+            margin-top: 2rem;
+        }
+
+        .panel {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            border-radius: 4px;
+        }
+
+        .stat-box {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+
+        .big-number {
+            font-size: 2rem;
+            font-weight: bold;
+            display: block;
+            margin-top: 0.5rem;
+        }
+
+        button {
+            background-color: transparent;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 10px 15px;
+            font-family: inherit;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+            margin-bottom: 10px;
+            text-align: left;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: var(--text-main);
+            color: var(--bg-color);
+        }
+
+        button:disabled {
+            border-color: #333;
+            color: #555;
+            cursor: not-allowed;
+        }
+
+        #log {
+            grid-column: 1 / -1;
+            height: 150px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            border-top: 1px dashed var(--text-dim);
+            padding-top: 10px;
+        }
+
+        .log-entry { margin-bottom: 5px; }
+        .alert { color: #ff00ff; }
+
+    </style>
+</head>
+<body>
+
+    <h1>Trenton Mass Accumulator v1.0</h1>
+    <p>Objective: Reach 500 Solar Masses (M☉) to escape the local ultramassive black hole.</p>
+
+    <div class="container">
+        <div class="panel">
+            <div class="stat-box">
+                Cosmic Lint
+                <span class="big-number" id="lintCount">0</span>
+                <small id="lintPerSec">0 lint/sec</small>
+            </div>
+            
+            <button id="btnGather" onclick="gatherLint()">[+] Scrape Lint (Manual)</button>
+            <button id="btnVac" onclick="buyVacuum()">[+] Buy Lint Vacuum (Cost: <span id="vacCost">10</span>)</button>
+            <button id="btnFab" onclick="buyFabricator()">[+] Buy Lint Fabricator (Cost: <span id="fabCost">100</span>)</button>
+        </div>
+
+        <div class="panel">
+            <div class="stat-box">
+                Trenton's Mass
+                <span class="big-number"><span id="trentonMass">0</span> M☉</span>
+                <small>Current Status: Featherweight</small>
+            </div>
+
+            <button id="btnFeed" onclick="feedTrenton()">[!] Convert Lint to Mass (Cost: <span id="feedCost">1000</span>)</button>
+        </div>
+
+        <div class="panel" id="log">
+            <div class="log-entry">> System initialized. Trenton is currently 0 M☉.</div>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        let state = {
+            lint: 0,
+            lintPerClick: 1,
+            vacuums: 0,
+            fabricators: 0,
+            trentonMass: 0,
+            
+            // Costs
+            vacCost: 10,
+            fabCost: 100,
+            feedCost: 1000
+        };
+
+        // DOM Elements
+        const elLint = document.getElementById('lintCount');
+        const elLPS = document.getElementById('lintPerSec');
+        const elMass = document.getElementById('trentonMass');
+        const elVacCost = document.getElementById('vacCost');
+        const elFabCost = document.getElementById('fabCost');
+        const elFeedCost = document.getElementById('feedCost');
+        const btnVac = document.getElementById('btnVac');
+        const btnFab = document.getElementById('btnFab');
+        const btnFeed = document.getElementById('btnFeed');
+        const log = document.getElementById('log');
+
+        function logMessage(msg, isAlert = false) {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry' + (isAlert ? ' alert' : '');
+            entry.innerText = `> ${msg}`;
+            log.prepend(entry);
+        }
+
+        function updateUI() {
+            elLint.innerText = Math.floor(state.lint).toLocaleString();
+            elMass.innerText = state.trentonMass.toLocaleString();
+            
+            let lps = (state.vacuums * 1) + (state.fabricators * 15);
+            elLPS.innerText = `${lps.toLocaleString()} lint/sec`;
+
+            elVacCost.innerText = Math.floor(state.vacCost).toLocaleString();
+            elFabCost.innerText = Math.floor(state.fabCost).toLocaleString();
+            elFeedCost.innerText = Math.floor(state.feedCost).toLocaleString();
+
+            btnVac.disabled = state.lint < state.vacCost;
+            btnFab.disabled = state.lint < state.fabCost;
+            btnFeed.disabled = state.lint < state.feedCost;
+        }
+
+        function gatherLint() {
+            state.lint += state.lintPerClick;
+            updateUI();
+        }
+
+        function buyVacuum() {
+            if (state.lint >= state.vacCost) {
+                state.lint -= state.vacCost;
+                state.vacuums++;
+                state.vacCost *= 1.15; // Cost scaling
+                updateUI();
+            }
+        }
+
+        function buyFabricator() {
+            if (state.lint >= state.fabCost) {
+                state.lint -= state.fabCost;
+                state.fabricators++;
+                state.fabCost *= 1.25;
+                updateUI();
+            }
+        }
+
+        function feedTrenton() {
+            // Converts currency WITHOUT resetting generators
+            if (state.lint >= state.feedCost) {
+                state.lint -= state.feedCost;
+                state.trentonMass++;
+                state.feedCost *= 1.5; // Exponential mass cost
+                
+                logMessage(`Trenton consumed ${Math.floor(state.feedCost / 1.5)} lint. Gained 1 Solar Mass.`);
+                
+                if (state.trentonMass === 10) logMessage("Trenton is now a heavy O-type star.", true);
+                if (state.trentonMass === 100) logMessage("Trenton is collapsing the local grid.", true);
+                if (state.trentonMass === 500) {
+                    logMessage("CRITICAL: Trenton has reached 500 M☉! Black hole escape velocity achieved. You win.", true);
+                    document.body.style.backgroundColor = "#001100";
+                }
+                
+                updateUI();
+            }
+        }
+
+        // Game Loop (Ticks 10 times a second for smooth generation)
+        setInterval(() => {
+            let lps = (state.vacuums * 1) + (state.fabricators * 15);
+            state.lint += lps / 10;
+            updateUI();
+        }, 100);
+
+        updateUI();
+    </script>
+</body>
+</html>
