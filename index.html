@@ -1,238 +1,1512 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trenton Mass Accumulator</title>
-    <style>
-        :root {
-            --bg-color: #050505;
-            --text-main: #00ffcc;
-            --text-dim: #00aa88;
-            --border-color: #00ffcc;
-            --bg-panel: #111;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trenton Mass Accumulator v2.0</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
 
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
-            margin: 0;
-            padding: 2rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+  :root {
+    --bg: #03060a;
+    --panel: #080d14;
+    --panel2: #0c1420;
+    --green: #00ffcc;
+    --green-dim: #00aa88;
+    --green-dark: #004433;
+    --cyan: #00eeff;
+    --magenta: #ff00ff;
+    --yellow: #ffee00;
+    --orange: #ff8800;
+    --red: #ff3333;
+    --gold: #ffd700;
+    --prestige-color: #cc88ff;
+    --prestige-dim: #7744aa;
+    --border: #00ffcc44;
+    --scrollbar: #00ffcc33;
+  }
 
-        h1 {
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 10px;
-        }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        .container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            width: 100%;
-            max-width: 800px;
-            margin-top: 2rem;
-        }
+  body {
+    background: var(--bg);
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
 
-        .panel {
-            background-color: var(--bg-panel);
-            border: 1px solid var(--border-color);
-            padding: 1.5rem;
-            border-radius: 4px;
-        }
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,204,0.015) 2px, rgba(0,255,204,0.015) 4px);
+    pointer-events: none;
+    z-index: 9999;
+  }
 
-        .stat-box {
-            font-size: 1.2rem;
-            margin-bottom: 1rem;
-        }
+  /* Starfield */
+  #stars {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
 
-        .big-number {
-            font-size: 2rem;
-            font-weight: bold;
-            display: block;
-            margin-top: 0.5rem;
-        }
+  .star {
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+    animation: twinkle var(--d, 3s) infinite alternate;
+    opacity: var(--o, 0.5);
+  }
+  @keyframes twinkle { from { opacity: 0.1; } to { opacity: var(--o, 0.8); } }
 
-        button {
-            background-color: transparent;
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-            padding: 10px 15px;
-            font-family: inherit;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            width: 100%;
-            margin-bottom: 10px;
-            text-align: left;
-        }
+  header {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    padding: 1.5rem 1rem 0.5rem;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #050d16 0%, transparent 100%);
+  }
 
-        button:hover:not(:disabled) {
-            background-color: var(--text-main);
-            color: var(--bg-color);
-        }
+  header h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(1.2rem, 3vw, 2rem);
+    font-weight: 900;
+    letter-spacing: 4px;
+    color: var(--green);
+    text-shadow: 0 0 20px var(--green), 0 0 40px var(--green-dim);
+  }
 
-        button:disabled {
-            border-color: #333;
-            color: #555;
-            cursor: not-allowed;
-        }
+  header p {
+    color: var(--green-dim);
+    font-size: 0.8rem;
+    margin-top: 0.3rem;
+    letter-spacing: 1px;
+  }
 
-        #log {
-            grid-column: 1 / -1;
-            height: 150px;
-            overflow-y: auto;
-            font-size: 0.9rem;
-            color: var(--text-dim);
-            border-top: 1px dashed var(--text-dim);
-            padding-top: 10px;
-        }
+  .prestige-banner {
+    display: inline-block;
+    color: var(--prestige-color);
+    font-size: 0.75rem;
+    border: 1px solid var(--prestige-dim);
+    padding: 0.1rem 0.6rem;
+    border-radius: 2px;
+    margin-top: 0.3rem;
+    text-shadow: 0 0 10px var(--prestige-color);
+  }
 
-        .log-entry { margin-bottom: 5px; }
-        .alert { color: #ff00ff; }
+  /* Layout */
+  .app {
+    position: relative;
+    z-index: 10;
+    display: grid;
+    grid-template-columns: 220px 1fr 240px;
+    grid-template-rows: auto 1fr auto;
+    gap: 0;
+    height: calc(100vh - 90px);
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 0.5rem;
+  }
 
-    </style>
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; height: auto; }
+    .sidebar-left, .sidebar-right { display: none; }
+  }
+
+  /* Stats bar */
+  .stats-bar {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 1rem;
+    padding: 0.5rem 0.5rem;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .stat-pill {
+    display: flex;
+    flex-direction: column;
+    min-width: 100px;
+  }
+
+  .stat-label {
+    font-size: 0.6rem;
+    color: var(--green-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .stat-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--green);
+  }
+
+  .stat-value.mass { color: var(--cyan); text-shadow: 0 0 10px var(--cyan); }
+  .stat-value.prestige { color: var(--prestige-color); text-shadow: 0 0 10px var(--prestige-color); }
+  .stat-value.gold-v { color: var(--gold); text-shadow: 0 0 10px var(--gold); }
+
+  .progress-wrap {
+    flex: 1;
+    min-width: 150px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .progress-bar {
+    height: 12px;
+    background: #111;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green-dark), var(--green));
+    transition: width 0.3s;
+    position: relative;
+  }
+  .progress-fill::after {
+    content: '';
+    position: absolute;
+    right: 0; top: 0; bottom: 0; width: 4px;
+    background: white;
+    opacity: 0.6;
+    filter: blur(2px);
+  }
+  .progress-fill.prestige-fill {
+    background: linear-gradient(90deg, #440088, var(--prestige-color));
+  }
+
+  .progress-label {
+    font-size: 0.65rem;
+    color: var(--green-dim);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* Panels */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel-header {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    color: var(--green-dim);
+    padding: 0.5rem 0.8rem;
+    border-bottom: 1px solid var(--border);
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .panel-body {
+    padding: 0.6rem;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .panel-body::-webkit-scrollbar { width: 4px; }
+  .panel-body::-webkit-scrollbar-track { background: transparent; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 2px; }
+
+  /* Sidebar left: generators */
+  .sidebar-left { grid-row: 2; grid-column: 1; }
+  .sidebar-right { grid-row: 2; grid-column: 3; }
+  .center-panel { grid-row: 2; grid-column: 2; border-left: none; border-right: none; }
+  .bottom-log { grid-row: 3; grid-column: 1 / -1; height: 120px; }
+
+  /* Generator cards */
+  .gen-card {
+    border: 1px solid #00ffcc22;
+    background: #0a1520;
+    border-radius: 2px;
+    padding: 0.5rem;
+    margin-bottom: 0.4rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+
+  .gen-card:hover:not(.locked) {
+    border-color: var(--green);
+    background: #0f2030;
+    box-shadow: 0 0 10px var(--green-dark);
+  }
+
+  .gen-card.locked {
+    opacity: 0.35;
+    cursor: not-allowed;
+    filter: grayscale(0.5);
+  }
+
+  .gen-card.affordable { border-color: var(--green-dim); }
+  .gen-card.maxed { border-color: var(--yellow); }
+
+  .gen-name {
+    font-size: 0.7rem;
+    color: var(--green);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .gen-count {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.8rem;
+    color: var(--cyan);
+    min-width: 30px;
+    text-align: right;
+  }
+
+  .gen-cost {
+    font-size: 0.65rem;
+    color: var(--green-dim);
+    margin-top: 2px;
+  }
+
+  .gen-rate {
+    font-size: 0.6rem;
+    color: #446655;
+    margin-top: 1px;
+  }
+
+  /* Tab system for center */
+  .tab-bar {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--border);
+    color: var(--green-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    padding: 0.5rem 0.3rem;
+    cursor: pointer;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+
+  .tab-btn:last-child { border-right: none; }
+  .tab-btn:hover { color: var(--green); background: #0f1f2f; }
+  .tab-btn.active {
+    color: var(--green);
+    background: var(--panel2);
+    border-bottom: 2px solid var(--green);
+  }
+  .tab-btn.prestige-tab.active {
+    color: var(--prestige-color);
+    border-bottom-color: var(--prestige-color);
+  }
+
+  .tab-content { display: none; height: 100%; flex-direction: column; }
+  .tab-content.active { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+
+  /* Main action area */
+  .mass-display {
+    text-align: center;
+    padding: 1.5rem 1rem 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .trenton-icon {
+    font-size: 3rem;
+    line-height: 1;
+    display: block;
+    cursor: pointer;
+    transition: transform 0.1s;
+    user-select: none;
+    filter: drop-shadow(0 0 10px var(--cyan));
+    animation: float 3s ease-in-out infinite;
+  }
+  .trenton-icon:active { transform: scale(0.9); }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+
+  .mass-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2rem;
+    font-weight: 900;
+    color: var(--cyan);
+    text-shadow: 0 0 20px var(--cyan);
+    display: block;
+    margin-top: 0.5rem;
+  }
+
+  .mass-label { font-size: 0.7rem; color: var(--green-dim); }
+  .mass-status { font-size: 0.75rem; color: var(--yellow); margin-top: 0.3rem; }
+
+  /* Buttons */
+  .btn {
+    display: block;
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    padding: 0.5rem 0.8rem;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+    margin-bottom: 0.4rem;
+    letter-spacing: 0.5px;
+  }
+
+  .btn:hover:not(:disabled) {
+    background: var(--green-dark);
+    border-color: var(--green);
+    box-shadow: 0 0 8px var(--green-dark);
+  }
+
+  .btn:disabled { color: #334; border-color: #223; cursor: not-allowed; }
+
+  .btn.feed-btn {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    font-size: 0.8rem;
+    padding: 0.7rem;
+    text-align: center;
+    font-family: 'Orbitron', sans-serif;
+  }
+  .btn.feed-btn:hover:not(:disabled) { background: #001830; box-shadow: 0 0 15px #00eeff44; }
+
+  .btn.prestige-btn {
+    border-color: var(--prestige-color);
+    color: var(--prestige-color);
+    font-size: 0.8rem;
+    padding: 0.7rem;
+    text-align: center;
+    font-family: 'Orbitron', sans-serif;
+  }
+  .btn.prestige-btn:hover:not(:disabled) { background: #1a0030; box-shadow: 0 0 15px #cc88ff44; }
+
+  /* Upgrades */
+  .upgrade-card {
+    border: 1px solid #00ffcc22;
+    background: #0a1520;
+    border-radius: 2px;
+    padding: 0.5rem;
+    margin-bottom: 0.4rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+
+  .upgrade-card:hover:not(.purchased):not(.locked-up) {
+    border-color: var(--yellow);
+    background: #1a1500;
+  }
+
+  .upgrade-card.purchased {
+    border-color: #224422;
+    background: #0a1a0a;
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .upgrade-card.locked-up {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .upgrade-name { font-size: 0.7rem; color: var(--yellow); }
+  .upgrade-name.purchased { color: #668866; }
+  .upgrade-desc { font-size: 0.6rem; color: #667755; margin-top: 2px; }
+  .upgrade-cost { font-size: 0.62rem; color: var(--green-dim); margin-top: 2px; }
+
+  /* Prestige upgrades */
+  .prestige-card {
+    border: 1px solid #cc88ff22;
+    background: #0e0a1a;
+    border-radius: 2px;
+    padding: 0.5rem;
+    margin-bottom: 0.4rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .prestige-card:hover:not(.purchased):not(.locked-up) {
+    border-color: var(--prestige-color);
+    background: #1a0835;
+  }
+  .prestige-card.purchased { opacity: 0.5; cursor: default; border-color: #441166; }
+  .prestige-card.locked-up { opacity: 0.25; cursor: not-allowed; }
+
+  .prestige-card .upgrade-name { color: var(--prestige-color); }
+  .prestige-card .upgrade-cost { color: var(--prestige-dim); }
+
+  /* Achievements */
+  .ach-card {
+    border: 1px solid #333;
+    background: #0a0a0a;
+    border-radius: 2px;
+    padding: 0.5rem;
+    margin-bottom: 0.4rem;
+    opacity: 0.4;
+  }
+
+  .ach-card.unlocked { border-color: var(--gold); background: #1a1000; opacity: 1; }
+  .ach-icon { font-size: 1.2rem; }
+  .ach-name { font-size: 0.7rem; color: var(--gold); }
+  .ach-name.locked-a { color: #444; }
+  .ach-desc { font-size: 0.6rem; color: #665500; margin-top: 2px; }
+
+  /* Log */
+  .bottom-log .panel-body {
+    padding: 0.4rem 0.8rem;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 2px;
+  }
+
+  .log-entry { font-size: 0.7rem; color: var(--green-dim); }
+  .log-entry.alert { color: var(--magenta); text-shadow: 0 0 8px var(--magenta); }
+  .log-entry.prestige-log { color: var(--prestige-color); text-shadow: 0 0 8px var(--prestige-color); }
+  .log-entry.gold-log { color: var(--gold); }
+  .log-entry.warn { color: var(--orange); }
+
+  /* Notifications */
+  #notifications {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    pointer-events: none;
+  }
+
+  .notif {
+    background: var(--panel2);
+    border: 1px solid var(--green);
+    color: var(--green);
+    padding: 0.4rem 0.8rem;
+    font-size: 0.7rem;
+    font-family: 'Share Tech Mono', monospace;
+    animation: notif-in 0.3s ease, notif-out 0.5s ease 2.5s forwards;
+    max-width: 260px;
+  }
+  .notif.prestige-notif { border-color: var(--prestige-color); color: var(--prestige-color); }
+  .notif.gold-notif { border-color: var(--gold); color: var(--gold); }
+
+  @keyframes notif-in { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes notif-out { from { opacity: 1; } to { opacity: 0; } }
+
+  /* Milestones */
+  .milestone-marker {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem;
+    margin-bottom: 0.3rem;
+    border-left: 2px solid #224;
+    font-size: 0.65rem;
+    color: #446;
+  }
+  .milestone-marker.done { border-left-color: var(--green); color: var(--green-dim); }
+  .milestone-marker.current { border-left-color: var(--yellow); color: var(--yellow); animation: pulse-yellow 1.5s infinite; }
+  @keyframes pulse-yellow { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+  /* Win screen */
+  #win-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.95);
+    z-index: 99999;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+  #win-overlay h2 { font-family: 'Orbitron', sans-serif; font-size: 2.5rem; color: var(--gold); text-shadow: 0 0 40px var(--gold); }
+  #win-overlay p { color: var(--green); font-size: 0.9rem; max-width: 400px; }
+  #win-overlay .win-stats { color: var(--cyan); font-size: 0.8rem; }
+
+  .section-title {
+    font-size: 0.6rem;
+    color: #446;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border-bottom: 1px solid #112;
+    padding-bottom: 3px;
+    margin: 0.6rem 0 0.4rem;
+  }
+</style>
 </head>
 <body>
+<div id="stars"></div>
+<div id="notifications"></div>
 
-    <h1>Trenton Mass Accumulator v1.0</h1>
-    <p>Objective: Reach 500 Solar Masses (M☉) to escape the local ultramassive black hole.</p>
+<header>
+  <h1>⚫ TRENTON MASS ACCUMULATOR</h1>
+  <p>Escape the ultramassive black hole. Reach 500 M☉ across all prestiges.</p>
+  <div class="prestige-banner" id="prestige-banner">PRESTIGE LEVEL: 0 | MULTIPLIER: ×1.00</div>
+</header>
 
-    <div class="container">
-        <div class="panel">
-            <div class="stat-box">
-                Cosmic Lint
-                <span class="big-number" id="lintCount">0</span>
-                <small id="lintPerSec">0 lint/sec</small>
-            </div>
-            
-            <button id="btnGather" onclick="gatherLint()">[+] Scrape Lint (Manual)</button>
-            <button id="btnVac" onclick="buyVacuum()">[+] Buy Lint Vacuum (Cost: <span id="vacCost">10</span>)</button>
-            <button id="btnFab" onclick="buyFabricator()">[+] Buy Lint Fabricator (Cost: <span id="fabCost">100</span>)</button>
-        </div>
+<div class="app">
+  <!-- Stats bar -->
+  <div class="stats-bar panel" style="grid-column:1/-1; grid-row:1; height:auto; flex-direction:row; padding:0.5rem;">
+    <div class="stat-pill">
+      <span class="stat-label">Cosmic Lint</span>
+      <span class="stat-value" id="s-lint">0</span>
+    </div>
+    <div class="stat-pill">
+      <span class="stat-label">Lint/sec</span>
+      <span class="stat-value" id="s-lps">0</span>
+    </div>
+    <div class="stat-pill">
+      <span class="stat-label">Trenton Mass</span>
+      <span class="stat-value mass" id="s-mass">0 M☉</span>
+    </div>
+    <div class="stat-pill">
+      <span class="stat-label">Prestige Lvl</span>
+      <span class="stat-value prestige" id="s-prestige">0</span>
+    </div>
+    <div class="stat-pill">
+      <span class="stat-label">Dark Matter</span>
+      <span class="stat-value gold-v" id="s-dm">0 DM</span>
+    </div>
+    <div class="stat-pill">
+      <span class="stat-label">All-time Mass</span>
+      <span class="stat-value" id="s-total">0 M☉</span>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span>Next mass feed</span>
+        <span id="feed-pct">0%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="feed-progress" style="width:0%"></div></div>
+      <div class="progress-label">
+        <span>Prestige goal (500 M☉)</span>
+        <span id="pres-pct">0%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill prestige-fill" id="pres-progress" style="width:0%"></div></div>
+    </div>
+    <button class="btn" style="width:auto;padding:0.3rem 0.7rem;font-size:0.65rem;margin:0;" onclick="saveGame()">💾 Save</button>
+    <button class="btn" style="width:auto;padding:0.3rem 0.7rem;font-size:0.65rem;margin:0;color:var(--red);border-color:var(--red);" onclick="if(confirm('HARD RESET? Lose EVERYTHING including prestige?'))hardReset()">☠ Reset</button>
+  </div>
 
-        <div class="panel">
-            <div class="stat-box">
-                Trenton's Mass
-                <span class="big-number"><span id="trentonMass">0</span> M☉</span>
-                <small>Current Status: Featherweight</small>
-            </div>
+  <!-- Left sidebar: Generators -->
+  <div class="panel sidebar-left">
+    <div class="panel-header">⚙ Generators</div>
+    <div class="panel-body" id="gen-list"></div>
+  </div>
 
-            <button id="btnFeed" onclick="feedTrenton()">[!] Convert Lint to Mass (Cost: <span id="feedCost">1000</span>)</button>
-        </div>
-
-        <div class="panel" id="log">
-            <div class="log-entry">> System initialized. Trenton is currently 0 M☉.</div>
-        </div>
+  <!-- Center panel -->
+  <div class="panel center-panel" style="display:flex;flex-direction:column;">
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('action')">ACTION</button>
+      <button class="tab-btn" onclick="switchTab('upgrades')">UPGRADES</button>
+      <button class="tab-btn" onclick="switchTab('milestones')">MILESTONES</button>
+      <button class="tab-btn prestige-tab" onclick="switchTab('prestige')">PRESTIGE</button>
     </div>
 
-    <script>
-        // Game State
-        let state = {
-            lint: 0,
-            lintPerClick: 1,
-            vacuums: 0,
-            fabricators: 0,
-            trentonMass: 0,
-            
-            // Costs
-            vacCost: 10,
-            fabCost: 100,
-            feedCost: 1000
-        };
+    <!-- ACTION TAB -->
+    <div class="tab-content active" id="tab-action" style="overflow-y:auto;">
+      <div class="mass-display">
+        <span class="trenton-icon" onclick="manualFeedClick()" title="Click Trenton!">⚫</span>
+        <span class="mass-value" id="mass-big">0 M☉</span>
+        <div class="mass-label">Trenton's Current Mass</div>
+        <div class="mass-status" id="mass-status">Featherweight — nothing yet.</div>
+      </div>
+      <div style="padding:0.7rem;">
+        <button class="btn feed-btn" id="feed-btn" onclick="feedTrenton()">
+          ▶ FEED TRENTON LINT<br>
+          <small id="feed-cost-label" style="font-size:0.65rem;font-family:'Share Tech Mono',monospace;">Cost: 1,000 lint → +1 M☉</small>
+        </button>
 
-        // DOM Elements
-        const elLint = document.getElementById('lintCount');
-        const elLPS = document.getElementById('lintPerSec');
-        const elMass = document.getElementById('trentonMass');
-        const elVacCost = document.getElementById('vacCost');
-        const elFabCost = document.getElementById('fabCost');
-        const elFeedCost = document.getElementById('feedCost');
-        const btnVac = document.getElementById('btnVac');
-        const btnFab = document.getElementById('btnFab');
-        const btnFeed = document.getElementById('btnFeed');
-        const log = document.getElementById('log');
+        <div class="section-title">Active Skills</div>
+        <button class="btn" id="btn-surge" onclick="activateSurge()">⚡ LINT SURGE — <span id="surge-cd">Ready</span></button>
+        <button class="btn" id="btn-collapse" onclick="activateCollapse()">🌀 GRAVITATIONAL COLLAPSE — <span id="collapse-cd">Locked (need 10 M☉)</span></button>
+        <button class="btn" id="btn-nova" onclick="activateNova()">💥 SUPERNOVA BURST — <span id="nova-cd">Locked (need 50 M☉)</span></button>
 
-        function logMessage(msg, isAlert = false) {
-            const entry = document.createElement('div');
-            entry.className = 'log-entry' + (isAlert ? ' alert' : '');
-            entry.innerText = `> ${msg}`;
-            log.prepend(entry);
-        }
+        <div class="section-title">Generators (Mobile)</div>
+        <div id="gen-list-mobile" style="display:none;"></div>
+      </div>
+    </div>
 
-        function updateUI() {
-            elLint.innerText = Math.floor(state.lint).toLocaleString();
-            elMass.innerText = state.trentonMass.toLocaleString();
-            
-            let lps = (state.vacuums * 1) + (state.fabricators * 15);
-            elLPS.innerText = `${lps.toLocaleString()} lint/sec`;
+    <!-- UPGRADES TAB -->
+    <div class="tab-content" id="tab-upgrades" style="overflow-y:auto;">
+      <div style="padding:0.6rem;">
+        <div class="section-title">Lint Upgrades</div>
+        <div id="upgrade-list-lint"></div>
+        <div class="section-title">Generator Upgrades</div>
+        <div id="upgrade-list-gen"></div>
+        <div class="section-title">Mass Upgrades</div>
+        <div id="upgrade-list-mass"></div>
+      </div>
+    </div>
 
-            elVacCost.innerText = Math.floor(state.vacCost).toLocaleString();
-            elFabCost.innerText = Math.floor(state.fabCost).toLocaleString();
-            elFeedCost.innerText = Math.floor(state.feedCost).toLocaleString();
+    <!-- MILESTONES TAB -->
+    <div class="tab-content" id="tab-milestones" style="overflow-y:auto;">
+      <div style="padding:0.6rem;" id="milestone-list"></div>
+    </div>
 
-            btnVac.disabled = state.lint < state.vacCost;
-            btnFab.disabled = state.lint < state.fabCost;
-            btnFeed.disabled = state.lint < state.feedCost;
-        }
+    <!-- PRESTIGE TAB -->
+    <div class="tab-content" id="tab-prestige" style="overflow-y:auto;">
+      <div style="padding:0.6rem;">
+        <div style="border:1px solid var(--prestige-dim);padding:1rem;margin-bottom:0.8rem;background:#0e0a1a;text-align:center;">
+          <div style="font-family:'Orbitron',sans-serif;color:var(--prestige-color);font-size:1rem;margin-bottom:0.4rem;">STELLAR COLLAPSE</div>
+          <div style="font-size:0.7rem;color:#aa88cc;margin-bottom:0.6rem;">Reset your run. Gain Dark Matter based on mass reached.<br>Each DM permanently boosts all lint production.</div>
+          <div style="font-size:0.8rem;color:var(--gold);margin-bottom:0.6rem;" id="dm-gain-preview">Will earn: 0 Dark Matter</div>
+          <button class="btn prestige-btn" id="prestige-btn" onclick="doPrestige()">☄ STELLAR COLLAPSE (Need 500 M☉)</button>
+        </div>
 
-        function gatherLint() {
-            state.lint += state.lintPerClick;
-            updateUI();
-        }
+        <div class="section-title">Dark Matter Upgrades</div>
+        <div id="prestige-upgrade-list"></div>
 
-        function buyVacuum() {
-            if (state.lint >= state.vacCost) {
-                state.lint -= state.vacCost;
-                state.vacuums++;
-                state.vacCost *= 1.15; // Cost scaling
-                updateUI();
-            }
-        }
+        <div class="section-title">Prestige History</div>
+        <div id="prestige-history" style="font-size:0.65rem;color:#446;padding:0.3rem;"></div>
+      </div>
+    </div>
+  </div>
 
-        function buyFabricator() {
-            if (state.lint >= state.fabCost) {
-                state.lint -= state.fabCost;
-                state.fabricators++;
-                state.fabCost *= 1.25;
-                updateUI();
-            }
-        }
+  <!-- Right sidebar: Achievements -->
+  <div class="panel sidebar-right">
+    <div class="panel-header">🏆 Achievements</div>
+    <div class="panel-body" id="ach-list"></div>
+  </div>
 
-        function feedTrenton() {
-            // Converts currency WITHOUT resetting generators
-            if (state.lint >= state.feedCost) {
-                state.lint -= state.feedCost;
-                state.trentonMass++;
-                state.feedCost *= 1.5; // Exponential mass cost
-                
-                logMessage(`Trenton consumed ${Math.floor(state.feedCost / 1.5)} lint. Gained 1 Solar Mass.`);
-                
-                if (state.trentonMass === 10) logMessage("Trenton is now a heavy O-type star.", true);
-                if (state.trentonMass === 100) logMessage("Trenton is collapsing the local grid.", true);
-                if (state.trentonMass === 500) {
-                    logMessage("CRITICAL: Trenton has reached 500 M☉! Black hole escape velocity achieved. You win.", true);
-                    document.body.style.backgroundColor = "#001100";
-                }
-                
-                updateUI();
-            }
-        }
+  <!-- Log -->
+  <div class="panel bottom-log">
+    <div class="panel-header" style="display:flex;justify-content:space-between;">
+      <span>📡 EVENT LOG</span>
+      <span id="log-time" style="font-size:0.6rem;color:#445;"></span>
+    </div>
+    <div class="panel-body" id="log-body"></div>
+  </div>
+</div>
 
-        // Game Loop (Ticks 10 times a second for smooth generation)
-        setInterval(() => {
-            let lps = (state.vacuums * 1) + (state.fabricators * 15);
-            state.lint += lps / 10;
-            updateUI();
-        }, 100);
+<div id="win-overlay">
+  <div style="font-size:4rem;">🌌</div>
+  <h2>ESCAPE ACHIEVED</h2>
+  <p>Trenton has reached <strong>500 M☉</strong> and torn free from the ultramassive black hole.</p>
+  <div class="win-stats" id="win-stats"></div>
+  <button class="btn prestige-btn" style="width:auto;margin-top:1rem;padding:0.7rem 2rem;" onclick="closeWin()">Continue Playing →</button>
+</div>
 
-        updateUI();
-    </script>
+<script>
+// =====================
+// GAME DATA DEFINITIONS
+// =====================
+
+const GENERATORS = [
+  { id:'lint-fingers', name:'Lint Fingers',    baseCost:10,    baseLPS:0.2,  desc:'Manually scrape lint.'},
+  { id:'vacuum',       name:'Lint Vacuum',     baseCost:80,    baseLPS:1.5,  desc:'Automated lint collection.'},
+  { id:'fabricator',   name:'Lint Fabricator', baseCost:500,   baseLPS:10,   desc:'Manufactures lint.'},
+  { id:'dark-cloud',   name:'Dark Cloud',      baseCost:3000,  baseLPS:60,   desc:'Cosmic dust condenser.'},
+  { id:'nebula-farm',  name:'Nebula Farm',     baseCost:15000, baseLPS:300,  desc:'Harvests nebular lint.'},
+  { id:'singularity',  name:'Singularity Tap', baseCost:80000, baseLPS:1500, desc:'Taps lint from event horizon.'},
+  { id:'void-ripper',  name:'Void Ripper',     baseCost:500000,baseLPS:8000, desc:'Tears lint from void fabric.'},
+  { id:'cosmos-loom',  name:'Cosmos Loom',     baseCost:3e6,   baseLPS:45000,desc:'Weaves matter into lint.'},
+];
+
+const UPGRADES = [
+  // Lint upgrades
+  {id:'u1', cat:'lint', name:'Sticky Fingers',       desc:'Manual clicks give ×2 lint.',        cost:50,     effect:'clickMult',  val:2,  req:()=>true},
+  {id:'u2', cat:'lint', name:'Carbon Brush',          desc:'Manual clicks give ×3 lint.',        cost:300,    effect:'clickMult',  val:3,  req:()=>S.upgrades.includes('u1')},
+  {id:'u3', cat:'lint', name:'Ionic Charge',          desc:'Manual clicks give ×5 lint.',        cost:5000,   effect:'clickMult',  val:5,  req:()=>S.upgrades.includes('u2')},
+  {id:'u4', cat:'lint', name:'Quantum Touch',         desc:'Manual clicks give ×10 lint.',       cost:50000,  effect:'clickMult',  val:10, req:()=>S.upgrades.includes('u3')},
+  // Generator upgrades
+  {id:'g1', cat:'gen',  name:'Oiled Rollers',         desc:'Vacuums produce ×2.',                cost:200,    effect:'genMult',    genId:'vacuum',       val:2,   req:()=>getGenCount('vacuum')>=5},
+  {id:'g2', cat:'gen',  name:'Auto-Tuned Vac',        desc:'Vacuums produce ×4.',                cost:2000,   effect:'genMult',    genId:'vacuum',       val:4,   req:()=>S.upgrades.includes('g1')},
+  {id:'g3', cat:'gen',  name:'Polymer Matrix',        desc:'Fabricators produce ×2.',            cost:2000,   effect:'genMult',    genId:'fabricator',   val:2,   req:()=>getGenCount('fabricator')>=5},
+  {id:'g4', cat:'gen',  name:'Quantum Looms',         desc:'Fabricators produce ×4.',            cost:20000,  effect:'genMult',    genId:'fabricator',   val:4,   req:()=>S.upgrades.includes('g3')},
+  {id:'g5', cat:'gen',  name:'Storm Seeds',           desc:'Dark Clouds produce ×2.',            cost:10000,  effect:'genMult',    genId:'dark-cloud',   val:2,   req:()=>getGenCount('dark-cloud')>=5},
+  {id:'g6', cat:'gen',  name:'Thunderhead Protocol',  desc:'Dark Clouds produce ×5.',            cost:100000, effect:'genMult',    genId:'dark-cloud',   val:5,   req:()=>S.upgrades.includes('g5')},
+  {id:'g7', cat:'gen',  name:'Star Seeder',           desc:'Nebula Farms produce ×2.',           cost:60000,  effect:'genMult',    genId:'nebula-farm',  val:2,   req:()=>getGenCount('nebula-farm')>=5},
+  {id:'g8', cat:'gen',  name:'Cosmic Fertilizer',     desc:'Nebula Farms produce ×4.',           cost:600000, effect:'genMult',    genId:'nebula-farm',  val:4,   req:()=>S.upgrades.includes('g7')},
+  {id:'g9', cat:'gen',  name:'Horizon Drill',         desc:'Singularity Taps produce ×2.',       cost:300000, effect:'genMult',    genId:'singularity',  val:2,   req:()=>getGenCount('singularity')>=5},
+  {id:'g10',cat:'gen',  name:'Event Horizon Bore',    desc:'Singularity Taps produce ×5.',       cost:3000000,effect:'genMult',    genId:'singularity',  val:5,   req:()=>S.upgrades.includes('g9')},
+  // Mass upgrades
+  {id:'m1', cat:'mass', name:'Dense Core',            desc:'Feed cost scales 10% slower.',       cost:500,    effect:'feedScale',  val:0.9, req:()=>S.trentonMass>=2},
+  {id:'m2', cat:'mass', name:'Neutron Density',        desc:'Feed cost scales 20% slower.',       cost:5000,   effect:'feedScale',  val:0.8, req:()=>S.trentonMass>=10},
+  {id:'m3', cat:'mass', name:'Degenerate Matter',      desc:'Each M☉ gives +5% lint/sec bonus.',  cost:50000,  effect:'massMult',   val:0.05,req:()=>S.trentonMass>=25},
+  {id:'m4', cat:'mass', name:'Quark Soup',             desc:'Feed cost scales 30% slower.',       cost:500000, effect:'feedScale',  val:0.7, req:()=>S.trentonMass>=50},
+  {id:'m5', cat:'mass', name:'Hawking Radiation Tap',  desc:'Passively gains 1 lint per M☉/sec.',cost:5000000,effect:'massPassive',val:1,   req:()=>S.trentonMass>=100},
+  // Global
+  {id:'gl1',cat:'lint', name:'Cosmic Efficiency',      desc:'All generators produce ×1.5.',       cost:1000,   effect:'globalMult', val:1.5, req:()=>getLPS()>=50},
+  {id:'gl2',cat:'lint', name:'Universal Harmony',      desc:'All generators produce ×2.',         cost:20000,  effect:'globalMult', val:2,   req:()=>S.upgrades.includes('gl1')},
+  {id:'gl3',cat:'lint', name:'Entropic Cascade',       desc:'All generators produce ×3.',         cost:500000, effect:'globalMult', val:3,   req:()=>S.upgrades.includes('gl2')},
+  {id:'gl4',cat:'lint', name:'Omega Flux',             desc:'All generators produce ×5.',         cost:10000000,effect:'globalMult',val:5,  req:()=>S.upgrades.includes('gl3')},
+];
+
+const PRESTIGE_UPGRADES = [
+  {id:'p1', name:'Dark Matter Resonance',  desc:'×1.5 to all lint production.',              cost:1,  effect:'presGlobalMult', val:1.5},
+  {id:'p2', name:'Mass Memory',            desc:'Start each run with 5 M☉.',                cost:2,  effect:'startMass',      val:5},
+  {id:'p3', name:'Stellar Inheritance',    desc:'×2 to all lint production.',                cost:3,  effect:'presGlobalMult', val:2},
+  {id:'p4', name:'Void Compression',       desc:'Feed cost starts 25% lower.',               cost:3,  effect:'feedCostStart',  val:0.75},
+  {id:'p5', name:'Dark Catalyst',          desc:'×3 to all lint production.',                cost:5,  effect:'presGlobalMult', val:3},
+  {id:'p6', name:'Generator Genesis',      desc:'Start each run with 3 of each generator.',  cost:5,  effect:'startGens',      val:3},
+  {id:'p7', name:'Antimatter Infusion',    desc:'×5 to all lint production.',                cost:10, effect:'presGlobalMult', val:5},
+  {id:'p8', name:'Singularity Seed',       desc:'Start each run with 5 M☉ and all gen ×10.',cost:15, effect:'prestige_combo', val:10},
+  {id:'p9', name:'Cosmic Omniscience',     desc:'×10 to all lint production.',               cost:25, effect:'presGlobalMult', val:10},
+  {id:'p10',name:'Trenton Unleashed',      desc:'All costs cut in half permanently.',         cost:50, effect:'costHalf',       val:0.5},
+];
+
+const ACHIEVEMENTS = [
+  {id:'a1',  icon:'🧶', name:'First Fluff',       desc:'Gather your first lint.',                  check:()=>S.totalLintEver>=1},
+  {id:'a2',  icon:'🌀', name:'Spin Cycle',         desc:'Reach 1,000 lint.',                        check:()=>S.totalLintEver>=1000},
+  {id:'a3',  icon:'⚫', name:'Heavy Enough',       desc:'Give Trenton 1 M☉.',                       check:()=>S.totalMassEver>=1},
+  {id:'a4',  icon:'🌌', name:'Stellar',            desc:'Reach 10 M☉.',                             check:()=>S.totalMassEver>=10},
+  {id:'a5',  icon:'💫', name:'Supergiant',         desc:'Reach 50 M☉.',                             check:()=>S.totalMassEver>=50},
+  {id:'a6',  icon:'⭐', name:'Massive',            desc:'Reach 100 M☉.',                            check:()=>S.totalMassEver>=100},
+  {id:'a7',  icon:'🌠', name:'Giant',              desc:'Reach 250 M☉.',                            check:()=>S.totalMassEver>=250},
+  {id:'a8',  icon:'☄',  name:'Escape Artist',      desc:'Reach 500 M☉ for the first time.',         check:()=>S.totalMassEver>=500},
+  {id:'a9',  icon:'🔮', name:'Dark Matter Novice', desc:'Earn your first Dark Matter.',              check:()=>S.totalDMEver>=1},
+  {id:'a10', icon:'💎', name:'Prestige Master',    desc:'Reach Prestige Level 5.',                   check:()=>S.prestigeLevel>=5},
+  {id:'a11', icon:'🏭', name:'Factory Floor',      desc:'Own 50 total generators.',                  check:()=>totalGens()>=50},
+  {id:'a12', icon:'⚡', name:'Surge Activated',    desc:'Use Lint Surge for the first time.',         check:()=>S.surgesUsed>=1},
+  {id:'a13', icon:'💥', name:'Supernova',          desc:'Use Supernova Burst.',                       check:()=>S.novasUsed>=1},
+  {id:'a14', icon:'📈', name:'Lint Millionaire',   desc:'Reach 1,000,000 lint at once.',              check:()=>S.lint>=1000000},
+  {id:'a15', icon:'🌙', name:'Night Shift',        desc:'Accumulate 10,000 lint/sec.',                check:()=>getLPS()>=10000},
+];
+
+const MILESTONES = [
+  {id:'ms1',  mass:1,   desc:'First Solar Mass — Trenton wakes up.',     reward:'Unlock Surge skill'},
+  {id:'ms2',  mass:5,   desc:'Proto-star forming.',                        reward:'Generators ×1.2'},
+  {id:'ms3',  mass:10,  desc:'Trenton ignites hydrogen fusion.',           reward:'Unlock Gravitational Collapse'},
+  {id:'ms4',  mass:25,  desc:'Trenton enters the main sequence.',          reward:'Feed cost scale ×0.95'},
+  {id:'ms5',  mass:50,  desc:'Trenton swells into a Red Giant.',           reward:'Unlock Supernova Burst'},
+  {id:'ms6',  mass:75,  desc:'Helium flash.',                              reward:'All generators ×1.5'},
+  {id:'ms7',  mass:100, desc:'Trenton approaches the Chandrasekhar limit.',reward:'Lint clicks ×3'},
+  {id:'ms8',  mass:150, desc:'Neutron star formation begins.',             reward:'LPS ×2'},
+  {id:'ms9',  mass:250, desc:'Trenton radiates Hawking particles.',        reward:'Feed cost scale ×0.9'},
+  {id:'ms10', mass:350, desc:'Approaching critical escape mass.',          reward:'All generators ×2'},
+  {id:'ms11', mass:500, desc:'ESCAPE VELOCITY REACHED.',                   reward:'WIN!'},
+];
+
+// =====================
+// GAME STATE
+// =====================
+
+const DEFAULT_STATE = () => ({
+  lint: 0,
+  totalLintEver: 0,
+  totalMassEver: 0,
+  totalDMEver: 0,
+  trentonMass: 0,
+  clickMult: 1,
+  gens: {},          // { genId: count }
+  genCosts: {},      // { genId: currentCost }
+  upgrades: [],      // array of upgrade ids
+  prestigeUpgrades: [],
+  prestigeLevel: 0,
+  darkMatter: 0,
+  surgesUsed: 0,
+  novasUsed: 0,
+  surgeCD: 0,
+  collapseCD: 0,
+  novaCD: 0,
+  feedCost: 1000,
+  milestonesDone: [],
+  achievements: [],
+  prestigeHistory: [],
+  runStart: Date.now(),
+  totalPlaytime: 0,
+});
+
+let S = DEFAULT_STATE();
+let lastTick = Date.now();
+let activeTab = 'action';
+let winShown = false;
+
+// =====================
+// SAVE / LOAD
+// =====================
+
+function saveGame() {
+  try {
+    S.totalPlaytime += Date.now() - lastTick;
+    const data = btoa(JSON.stringify(S));
+    document.cookie = `trenton_save=${data}; max-age=31536000; path=/`;
+    // Also localStorage fallback
+    try { localStorage.setItem('trenton_save', data); } catch(e){}
+    showNotif('Game saved ✓', 'default');
+    logMsg('Game saved.', 'default');
+  } catch(e) { logMsg('Save failed: ' + e.message, 'warn'); }
+}
+
+function loadGame() {
+  try {
+    let data = null;
+    const cookieMatch = document.cookie.match(/trenton_save=([^;]+)/);
+    if (cookieMatch) data = cookieMatch[1];
+    if (!data) {
+      try { data = localStorage.getItem('trenton_save'); } catch(e){}
+    }
+    if (data) {
+      const loaded = JSON.parse(atob(data));
+      // Merge with defaults in case new fields added
+      S = Object.assign(DEFAULT_STATE(), loaded);
+      logMsg('Save loaded. Welcome back!', 'default');
+    }
+  } catch(e) {
+    logMsg('Could not load save: ' + e.message, 'warn');
+  }
+}
+
+function hardReset() {
+  document.cookie = 'trenton_save=; max-age=0; path=/';
+  try { localStorage.removeItem('trenton_save'); } catch(e) {}
+  S = DEFAULT_STATE();
+  winShown = false;
+  logMsg('Hard reset. Starting fresh.', 'warn');
+  renderAll();
+}
+
+// Auto-save every 30s
+setInterval(saveGame, 30000);
+
+// =====================
+// HELPERS
+// =====================
+
+function getGenCount(id) { return S.gens[id] || 0; }
+function totalGens() { return Object.values(S.gens).reduce((a,b)=>a+b,0); }
+
+function getGenCost(id) {
+  if (!S.genCosts[id]) {
+    const base = GENERATORS.find(g=>g.id===id).baseCost;
+    S.genCosts[id] = base;
+  }
+  let cost = S.genCosts[id];
+  // Apply prestige cost half
+  if (S.prestigeUpgrades.includes('p10')) cost *= 0.5;
+  return cost;
+}
+
+function getClickLintAmt() {
+  let mult = 1;
+  for (const uid of S.upgrades) {
+    const u = UPGRADES.find(u=>u.id===uid);
+    if (u && u.effect === 'clickMult') mult *= u.val;
+  }
+  // Milestone bonus
+  if (S.milestonesDone.includes('ms7')) mult *= 3;
+  mult *= getPresGlobalMult();
+  return Math.max(1, mult);
+}
+
+function getPresGlobalMult() {
+  let mult = 1;
+  // DM passive: each DM = +10% production
+  mult *= Math.pow(1.1, S.darkMatter);
+  for (const uid of S.prestigeUpgrades) {
+    const u = PRESTIGE_UPGRADES.find(u=>u.id===uid);
+    if (!u) continue;
+    if (u.effect === 'presGlobalMult') mult *= u.val;
+    if (u.effect === 'prestige_combo') mult *= u.val;
+  }
+  return mult;
+}
+
+function getLPS() {
+  let total = 0;
+  const pressMult = getPresGlobalMult();
+  for (const gen of GENERATORS) {
+    const cnt = getGenCount(gen.id);
+    if (!cnt) continue;
+    let rate = gen.baseLPS * cnt;
+    // Per-gen upgrades
+    for (const uid of S.upgrades) {
+      const u = UPGRADES.find(u=>u.id===uid);
+      if (u && u.effect==='genMult' && u.genId===gen.id) rate *= u.val;
+    }
+    // Global mult upgrades
+    for (const uid of S.upgrades) {
+      const u = UPGRADES.find(u=>u.id===uid);
+      if (u && u.effect==='globalMult') rate *= u.val;
+    }
+    // Milestone bonuses
+    if (S.milestonesDone.includes('ms2')) rate *= 1.2;
+    if (S.milestonesDone.includes('ms6')) rate *= 1.5;
+    if (S.milestonesDone.includes('ms8')) rate *= 2;
+    if (S.milestonesDone.includes('ms10')) rate *= 2;
+    total += rate;
+  }
+  // Mass passive
+  if (S.upgrades.includes('m5')) total += S.trentonMass * 1;
+  // Hawking passive from degenerate matter
+  if (S.upgrades.includes('m3')) total += S.trentonMass * S.trentonMass * 0.01;
+  total *= pressMult;
+  return total;
+}
+
+function getFeedCost() {
+  let cost = S.feedCost;
+  // Prestige start cost
+  if (S.prestigeUpgrades.includes('p4')) cost *= 0.75;
+  if (S.prestigeUpgrades.includes('p10')) cost *= 0.5;
+  return Math.floor(cost);
+}
+
+function getFeedScaleMult() {
+  let scale = 1.5;
+  for (const uid of S.upgrades) {
+    const u = UPGRADES.find(u=>u.id===uid);
+    if (u && u.effect==='feedScale') scale *= u.val;
+  }
+  if (S.milestonesDone.includes('ms4')) scale *= 0.95;
+  if (S.milestonesDone.includes('ms9')) scale *= 0.9;
+  return scale;
+}
+
+function getDMGain() {
+  // DM = floor(mass / 50) + prestige level bonuses
+  return Math.max(0, Math.floor(S.trentonMass / 50) + Math.floor(S.prestigeLevel / 2));
+}
+
+function fmtNum(n) {
+  if (n === undefined || n === null || isNaN(n)) return '0';
+  if (n >= 1e15) return (n/1e15).toFixed(2)+'Q';
+  if (n >= 1e12) return (n/1e12).toFixed(2)+'T';
+  if (n >= 1e9)  return (n/1e9).toFixed(2)+'B';
+  if (n >= 1e6)  return (n/1e6).toFixed(2)+'M';
+  if (n >= 1e4)  return Math.floor(n).toLocaleString();
+  return Math.floor(n).toLocaleString();
+}
+
+function fmtTime(s) {
+  s = Math.floor(s);
+  if (s < 60) return s+'s';
+  if (s < 3600) return Math.floor(s/60)+'m '+( s%60)+'s';
+  return Math.floor(s/3600)+'h '+Math.floor((s%3600)/60)+'m';
+}
+
+function getMassStatus() {
+  const m = S.trentonMass;
+  if (m === 0) return 'Featherweight — nothing yet.';
+  if (m < 5)   return 'Sub-stellar object.';
+  if (m < 10)  return 'Brown dwarf territory.';
+  if (m < 20)  return 'Low-mass star.';
+  if (m < 50)  return 'Main sequence star.';
+  if (m < 100) return 'O-type supergiant!';
+  if (m < 200) return 'Approaching neutron star.';
+  if (m < 350) return '⚠ Near Chandrasekhar limit!';
+  if (m < 500) return '🔴 CRITICAL MASS APPROACHING.';
+  return '☀ ESCAPE VELOCITY REACHED!';
+}
+
+// =====================
+// GAME ACTIONS
+// =====================
+
+function manualFeedClick() {
+  const amt = getClickLintAmt();
+  S.lint += amt;
+  S.totalLintEver += amt;
+  // Floating text
+  showFloatingText('+' + fmtNum(amt) + ' lint');
+}
+
+function buyGen(id) {
+  const cost = getGenCost(id);
+  if (S.lint < cost) return;
+  S.lint -= cost;
+  S.gens[id] = (S.gens[id] || 0) + 1;
+  S.genCosts[id] = (S.genCosts[id] || GENERATORS.find(g=>g.id===id).baseCost) * 1.15;
+  renderAll();
+}
+
+function feedTrenton() {
+  const cost = getFeedCost();
+  if (S.lint < cost) return;
+  S.lint -= cost;
+  S.feedCost *= getFeedScaleMult();
+  S.trentonMass++;
+  S.totalMassEver = Math.max(S.totalMassEver, S.trentonMass);
+  logMsg(`Trenton consumed ${fmtNum(cost)} lint → +1 M☉ (now ${S.trentonMass} M☉)`, 'default');
+  checkMilestones();
+  checkAchievements();
+  if (S.trentonMass >= 500 && !winShown) triggerWin();
+  renderAll();
+}
+
+function buyUpgrade(id) {
+  if (S.upgrades.includes(id)) return;
+  const u = UPGRADES.find(u=>u.id===id);
+  if (!u || S.lint < u.cost || !u.req()) return;
+  S.lint -= u.cost;
+  S.upgrades.push(id);
+  logMsg(`Upgrade purchased: ${u.name}`, 'gold');
+  showNotif('Upgrade: ' + u.name, 'gold');
+  renderAll();
+}
+
+function buyPrestigeUpgrade(id) {
+  if (S.prestigeUpgrades.includes(id)) return;
+  const u = PRESTIGE_UPGRADES.find(u=>u.id===id);
+  if (!u || S.darkMatter < u.cost) return;
+  S.darkMatter -= u.cost;
+  S.prestigeUpgrades.push(id);
+  logMsg(`Dark Matter upgrade: ${u.name}`, 'prestige');
+  showNotif('DM Upgrade: ' + u.name, 'prestige');
+  renderAll();
+}
+
+function doPrestige() {
+  if (S.trentonMass < 500) return;
+  const dmGain = getDMGain();
+  S.prestigeHistory.push({ level: S.prestigeLevel+1, mass: S.trentonMass, dm: dmGain, time: Date.now()-S.runStart });
+  S.prestigeLevel++;
+  S.darkMatter += dmGain;
+  S.totalDMEver += dmGain;
+  
+  logMsg(`★ STELLAR COLLAPSE! Prestige ${S.prestigeLevel}. Gained ${dmGain} Dark Matter.`, 'prestige');
+  showNotif(`Prestige ${S.prestigeLevel}! +${dmGain} DM`, 'prestige');
+
+  // Reset run (but keep persistent)
+  const keep = {
+    totalLintEver: S.totalLintEver,
+    totalMassEver: S.totalMassEver,
+    totalDMEver: S.totalDMEver,
+    prestigeLevel: S.prestigeLevel,
+    darkMatter: S.darkMatter,
+    prestigeUpgrades: S.prestigeUpgrades,
+    prestigeHistory: S.prestigeHistory,
+    achievements: S.achievements,
+    surgesUsed: S.surgesUsed,
+    novasUsed: S.novasUsed,
+    totalPlaytime: S.totalPlaytime + (Date.now() - S.runStart),
+    runStart: Date.now(),
+  };
+
+  S = Object.assign(DEFAULT_STATE(), keep);
+
+  // Apply start bonuses
+  if (S.prestigeUpgrades.includes('p2')) S.trentonMass = 5;
+  if (S.prestigeUpgrades.includes('p8')) { S.trentonMass = 5; }
+  if (S.prestigeUpgrades.includes('p6') || S.prestigeUpgrades.includes('p8')) {
+    for (const g of GENERATORS) { S.gens[g.id] = 3; }
+  }
+  S.totalMassEver = Math.max(S.totalMassEver, S.trentonMass);
+
+  checkAchievements();
+  renderAll();
+}
+
+// Skills
+let surgeActive = false;
+let surgeTimer = 0;
+const SURGE_CD = 60, SURGE_DUR = 15;
+const COLLAPSE_CD = 120;
+const NOVA_CD = 300;
+
+function activateSurge() {
+  if (S.surgeCD > 0 || S.trentonMass < 1) return;
+  surgeActive = true;
+  surgeTimer = SURGE_DUR;
+  S.surgeCD = SURGE_CD;
+  S.surgesUsed++;
+  logMsg('⚡ Lint Surge activated! LPS ×5 for 15s.', 'gold');
+  showNotif('⚡ LINT SURGE! ×5 LPS for 15s', 'gold');
+  checkAchievements();
+}
+
+function activateCollapse() {
+  if (S.collapseCD > 0 || S.trentonMass < 10) return;
+  // Instantly gain 30s worth of lint
+  const bonus = getLPS() * 30;
+  S.lint += bonus;
+  S.totalLintEver += bonus;
+  S.collapseCD = COLLAPSE_CD;
+  logMsg(`🌀 Gravitational Collapse! +${fmtNum(bonus)} lint instantly.`, 'gold');
+  showNotif('🌀 Collapse! +' + fmtNum(bonus) + ' lint', 'gold');
+}
+
+function activateNova() {
+  if (S.novaCD > 0 || S.trentonMass < 50) return;
+  // Gain 120s lint + 10% free mass reduction
+  const bonus = getLPS() * 120;
+  S.lint += bonus;
+  S.totalLintEver += bonus;
+  S.feedCost = Math.max(100, S.feedCost * 0.7);
+  S.novaCD = NOVA_CD;
+  S.novasUsed++;
+  logMsg(`💥 Supernova Burst! +${fmtNum(bonus)} lint. Feed cost reduced.`, 'alert');
+  showNotif('💥 SUPERNOVA! Massive lint burst.', 'gold');
+  checkAchievements();
+}
+
+// =====================
+// MILESTONES & ACHIEVEMENTS
+// =====================
+
+function checkMilestones() {
+  for (const ms of MILESTONES) {
+    if (!S.milestonesDone.includes(ms.id) && S.trentonMass >= ms.mass) {
+      S.milestonesDone.push(ms.id);
+      logMsg(`📍 MILESTONE: ${ms.desc} → ${ms.reward}`, 'gold');
+      showNotif('Milestone: ' + ms.desc, 'gold');
+    }
+  }
+}
+
+function checkAchievements() {
+  for (const ach of ACHIEVEMENTS) {
+    if (!S.achievements.includes(ach.id) && ach.check()) {
+      S.achievements.push(ach.id);
+      logMsg(`🏆 ACHIEVEMENT: ${ach.name} — ${ach.desc}`, 'gold');
+      showNotif(`🏆 ${ach.name}`, 'gold');
+    }
+  }
+}
+
+function triggerWin() {
+  winShown = true;
+  document.getElementById('win-overlay').style.display = 'flex';
+  document.getElementById('win-stats').textContent =
+    `Prestige Level: ${S.prestigeLevel} | Dark Matter: ${S.darkMatter} | Playtime: ${fmtTime((S.totalPlaytime + Date.now() - S.runStart)/1000)}`;
+  logMsg('🌌 TRENTON HAS ESCAPED THE BLACK HOLE. YOU WIN.', 'alert');
+}
+
+function closeWin() {
+  document.getElementById('win-overlay').style.display = 'none';
+}
+
+// =====================
+// UI / RENDER
+// =====================
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function renderGenerators(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '';
+  for (const gen of GENERATORS) {
+    const cnt = getGenCount(gen.id);
+    const cost = getGenCost(gen.id);
+    const canAfford = S.lint >= cost;
+    const lps = gen.baseLPS * cnt;
+    const card = document.createElement('div');
+    card.className = 'gen-card' + (canAfford ? ' affordable' : '') + (cnt >= 999 ? ' maxed' : '');
+    card.onclick = () => buyGen(gen.id);
+    card.innerHTML = `
+      <div class="gen-name"><span>${gen.name}</span><span class="gen-count">${cnt}</span></div>
+      <div class="gen-cost">Cost: ${fmtNum(cost)} lint</div>
+      <div class="gen-rate">${fmtNum(lps)} lint/sec total</div>
+    `;
+    el.appendChild(card);
+  }
+}
+
+function renderUpgrades() {
+  const lintEl = document.getElementById('upgrade-list-lint');
+  const genEl  = document.getElementById('upgrade-list-gen');
+  const massEl = document.getElementById('upgrade-list-mass');
+  if (!lintEl) return;
+  lintEl.innerHTML = ''; genEl.innerHTML = ''; massEl.innerHTML = '';
+
+  for (const u of UPGRADES) {
+    const purchased = S.upgrades.includes(u.id);
+    const visible = u.req();
+    const canAfford = S.lint >= u.cost;
+    const card = document.createElement('div');
+    card.className = 'upgrade-card' + (purchased?' purchased':'') + (!visible&&!purchased?' locked-up':'');
+    card.onclick = () => buyUpgrade(u.id);
+    card.innerHTML = `
+      <div class="upgrade-name ${purchased?'purchased':''}">${purchased?'✓ ':''} ${u.name}</div>
+      <div class="upgrade-desc">${u.desc}</div>
+      ${!purchased?`<div class="upgrade-cost">Cost: ${fmtNum(u.cost)} lint${!canAfford?' ✗':' ✓'}</div>`:''}
+    `;
+    const target = u.cat==='gen' ? genEl : u.cat==='mass' ? massEl : lintEl;
+    target.appendChild(card);
+  }
+}
+
+function renderPrestige() {
+  const el = document.getElementById('prestige-upgrade-list');
+  const histEl = document.getElementById('prestige-history');
+  if (!el) return;
+  el.innerHTML = '';
+
+  for (const u of PRESTIGE_UPGRADES) {
+    const purchased = S.prestigeUpgrades.includes(u.id);
+    const canAfford = S.darkMatter >= u.cost;
+    const card = document.createElement('div');
+    card.className = 'prestige-card' + (purchased?' purchased':'') + (!purchased&&!canAfford?' locked-up':'');
+    card.onclick = () => buyPrestigeUpgrade(u.id);
+    card.innerHTML = `
+      <div class="upgrade-name">${purchased?'✓ ':''} ${u.name}</div>
+      <div class="upgrade-desc" style="color:#9966cc;">${u.desc}</div>
+      <div class="upgrade-cost">Cost: ${u.cost} Dark Matter${purchased?' (owned)':canAfford?' ✓':' ✗'}</div>
+    `;
+    el.appendChild(card);
+  }
+
+  if (histEl) {
+    histEl.innerHTML = S.prestigeHistory.length === 0
+      ? '<span style="color:#334;">No prestiges yet.</span>'
+      : S.prestigeHistory.map(h=>`<div>P${h.level}: ${h.mass} M☉ in ${fmtTime(h.time/1000)} → +${h.dm} DM</div>`).join('');
+  }
+}
+
+function renderMilestones() {
+  const el = document.getElementById('milestone-list');
+  if (!el) return;
+  el.innerHTML = '';
+  for (const ms of MILESTONES) {
+    const done = S.milestonesDone.includes(ms.id);
+    const current = !done && S.trentonMass < ms.mass && (MILESTONES.indexOf(ms) === 0 || S.milestonesDone.includes(MILESTONES[MILESTONES.indexOf(ms)-1]?.id));
+    const div = document.createElement('div');
+    div.className = 'milestone-marker' + (done?' done':current?' current':'');
+    div.innerHTML = `
+      <span>${done?'✓':current?'▶':'○'}</span>
+      <span><strong>${ms.mass} M☉</strong> — ${ms.desc}<br><small style="color:#446;">${ms.reward}</small></span>
+    `;
+    el.appendChild(div);
+  }
+}
+
+function renderAchievements() {
+  const el = document.getElementById('ach-list');
+  if (!el) return;
+  el.innerHTML = '';
+  for (const ach of ACHIEVEMENTS) {
+    const unlocked = S.achievements.includes(ach.id);
+    const card = document.createElement('div');
+    card.className = 'ach-card' + (unlocked?' unlocked':'');
+    card.innerHTML = `
+      <div style="display:flex;gap:0.4rem;align-items:center;">
+        <span class="ach-icon">${unlocked?ach.icon:'?'}</span>
+        <span class="ach-name ${unlocked?'':'locked-a'}">${unlocked?ach.name:'???'}</span>
+      </div>
+      <div class="ach-desc">${unlocked?ach.desc:'...'}</div>
+    `;
+    el.appendChild(card);
+  }
+}
+
+function renderStats() {
+  const lps = getLPS();
+  const surgeMult = surgeActive ? 5 : 1;
+  document.getElementById('s-lint').textContent = fmtNum(S.lint);
+  document.getElementById('s-lps').textContent = fmtNum(lps * surgeMult) + '/s';
+  document.getElementById('s-mass').textContent = S.trentonMass + ' M☉';
+  document.getElementById('s-prestige').textContent = S.prestigeLevel;
+  document.getElementById('s-dm').textContent = fmtNum(S.darkMatter) + ' DM';
+  document.getElementById('s-total').textContent = fmtNum(S.totalMassEver) + ' M☉';
+
+  // Progress bars
+  const feedCost = getFeedCost();
+  const feedPct = Math.min(100, (S.lint / feedCost) * 100);
+  document.getElementById('feed-progress').style.width = feedPct + '%';
+  document.getElementById('feed-pct').textContent = Math.floor(feedPct) + '%';
+
+  const presPct = Math.min(100, (S.trentonMass / 500) * 100);
+  document.getElementById('pres-progress').style.width = presPct + '%';
+  document.getElementById('pres-pct').textContent = Math.floor(presPct) + '%';
+
+  // Mass display
+  document.getElementById('mass-big').textContent = S.trentonMass + ' M☉';
+  document.getElementById('mass-status').textContent = getMassStatus();
+
+  // Feed btn
+  const feedBtn = document.getElementById('feed-btn');
+  feedBtn.disabled = S.lint < feedCost;
+  document.getElementById('feed-cost-label').textContent = `Cost: ${fmtNum(feedCost)} lint → +1 M☉`;
+
+  // Prestige banner
+  document.getElementById('prestige-banner').textContent =
+    `PRESTIGE LEVEL: ${S.prestigeLevel} | DARK MATTER: ${fmtNum(S.darkMatter)} | MULT: ×${getPresGlobalMult().toFixed(2)}`;
+
+  // DM preview
+  document.getElementById('dm-gain-preview').textContent =
+    `Will earn: ${getDMGain()} Dark Matter (need 500 M☉)`;
+
+  // Prestige btn
+  const presBtn = document.getElementById('prestige-btn');
+  presBtn.disabled = S.trentonMass < 500;
+  presBtn.textContent = S.trentonMass >= 500
+    ? `☄ STELLAR COLLAPSE! EARN ${getDMGain()} DARK MATTER`
+    : `☄ STELLAR COLLAPSE (Need 500 M☉ — ${S.trentonMass}/500)`;
+
+  // Skills
+  updateSkillButtons();
+}
+
+function updateSkillButtons() {
+  const sEl = document.getElementById('surge-cd');
+  const cEl = document.getElementById('collapse-cd');
+  const nEl = document.getElementById('nova-cd');
+  const sBtn = document.getElementById('btn-surge');
+  const cBtn = document.getElementById('btn-collapse');
+  const nBtn = document.getElementById('btn-nova');
+
+  if (S.surgeCD > 0) { sEl.textContent = `CD: ${Math.ceil(S.surgeCD)}s`; sBtn.disabled = true; }
+  else if (surgeActive) { sEl.textContent = `ACTIVE ${Math.ceil(surgeTimer)}s`; sBtn.disabled = true; }
+  else if (S.trentonMass < 1) { sEl.textContent = 'Locked (need 1 M☉)'; sBtn.disabled = true; }
+  else { sEl.textContent = 'Ready!'; sBtn.disabled = false; }
+
+  if (S.trentonMass < 10) { cEl.textContent = 'Locked (need 10 M☉)'; cBtn.disabled = true; }
+  else if (S.collapseCD > 0) { cEl.textContent = `CD: ${Math.ceil(S.collapseCD)}s`; cBtn.disabled = true; }
+  else { cEl.textContent = 'Ready!'; cBtn.disabled = false; }
+
+  if (S.trentonMass < 50) { nEl.textContent = 'Locked (need 50 M☉)'; nBtn.disabled = true; }
+  else if (S.novaCD > 0) { nEl.textContent = `CD: ${Math.ceil(S.novaCD)}s`; nBtn.disabled = true; }
+  else { nEl.textContent = 'Ready!'; nBtn.disabled = false; }
+}
+
+function renderAll() {
+  renderStats();
+  renderGenerators('gen-list');
+  renderUpgrades();
+  renderPrestige();
+  renderMilestones();
+  renderAchievements();
+}
+
+// =====================
+// LOG & NOTIFICATIONS
+// =====================
+
+function logMsg(msg, type='default') {
+  const el = document.getElementById('log-body');
+  if (!el) return;
+  const div = document.createElement('div');
+  div.className = 'log-entry' + (type==='alert'?' alert':type==='prestige'?' prestige-log':type==='gold'?' gold-log':type==='warn'?' warn':'');
+  const t = new Date();
+  div.textContent = `[${t.getHours().toString().padStart(2,'0')}:${t.getMinutes().toString().padStart(2,'0')}] ${msg}`;
+  el.prepend(div);
+  if (el.children.length > 100) el.lastChild.remove();
+  document.getElementById('log-time').textContent = t.toLocaleTimeString();
+}
+
+function showNotif(msg, type='default') {
+  const container = document.getElementById('notifications');
+  const div = document.createElement('div');
+  div.className = 'notif' + (type==='prestige'?' prestige-notif':type==='gold'?' gold-notif':'');
+  div.textContent = msg;
+  container.appendChild(div);
+  setTimeout(() => div.remove(), 3100);
+}
+
+function showFloatingText(txt) {
+  const icon = document.querySelector('.trenton-icon');
+  if (!icon) return;
+  const el = document.createElement('div');
+  el.textContent = txt;
+  el.style.cssText = `
+    position:fixed;
+    color:var(--green);
+    font-family:'Share Tech Mono',monospace;
+    font-size:0.8rem;
+    pointer-events:none;
+    z-index:9998;
+    animation:floatup 1s ease forwards;
+  `;
+  const rect = icon.getBoundingClientRect();
+  el.style.left = (rect.left + Math.random()*40 - 20) + 'px';
+  el.style.top = (rect.top - 10) + 'px';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1000);
+}
+
+// =====================
+// STARFIELD
+// =====================
+
+function buildStars() {
+  const c = document.getElementById('stars');
+  for (let i = 0; i < 120; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const size = Math.random() * 2 + 0.5;
+    s.style.cssText = `
+      width:${size}px;height:${size}px;
+      left:${Math.random()*100}%;top:${Math.random()*100}%;
+      --d:${2+Math.random()*4}s;
+      --o:${0.3+Math.random()*0.7};
+      animation-delay:${Math.random()*4}s;
+    `;
+    c.appendChild(s);
+  }
+}
+
+// =====================
+// GAME LOOP
+// =====================
+
+const TICK_MS = 100;
+
+setInterval(() => {
+  const now = Date.now();
+  const dt = (now - lastTick) / 1000;
+  lastTick = now;
+
+  let lps = getLPS();
+  if (surgeActive) lps *= 5;
+
+  const gained = lps * dt;
+  S.lint += gained;
+  S.totalLintEver += gained;
+
+  // Cooldowns
+  if (S.surgeCD > 0) S.surgeCD -= dt;
+  if (S.collapseCD > 0) S.collapseCD -= dt;
+  if (S.novaCD > 0) S.novaCD -= dt;
+  if (surgeActive) {
+    surgeTimer -= dt;
+    if (surgeTimer <= 0) { surgeActive = false; logMsg('⚡ Lint Surge ended.', 'default'); }
+  }
+
+  checkAchievements();
+  renderStats();
+  renderGenerators('gen-list');
+}, TICK_MS);
+
+// Full render every 2s (for upgrades etc.)
+setInterval(renderAll, 2000);
+
+// Add float up animation dynamically
+const style = document.createElement('style');
+style.textContent = `@keyframes floatup { from { opacity:1; transform:translateY(0); } to { opacity:0; transform:translateY(-40px); } }`;
+document.head.appendChild(style);
+
+// =====================
+// INIT
+// =====================
+
+buildStars();
+loadGame();
+logMsg('System initialized. Trenton is waiting to grow.', 'default');
+renderAll();
+</script>
 </body>
 </html>
